@@ -1,0 +1,18 @@
+domain: grotjohann.com
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: pg-operator
+repo: github.com/heinrichgrt/pg-operator
+resources:
+- api:
+    crdVersion: v1
+  controller: true
+  domain: grotjohann.com
+  group: db
+  kind: Postgres
+  path: github.com/heinrichgrt/pg-operator/api/v1
+  version: v1
+version: "3"

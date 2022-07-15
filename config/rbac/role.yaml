@@ -1,0 +1,59 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - db.grotjohann.com
+  resources:
+  - postgres
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - db.grotjohann.com
+  resources:
+  - postgres/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - db.grotjohann.com
+  resources:
+  - postgres/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - db.grotjohann.com
+  resources:
+  - postgresdbs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - db.grotjohann.com
+  resources:
+  - postgresdbs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - db.grotjohann.com
+  resources:
+  - postgresdbs/status
+  verbs:
+  - get
+  - patch
+  - update

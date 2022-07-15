@@ -1,0 +1,9 @@
+apiVersion: db.grotjohann.com/v1
+kind: PostgresDB
+metadata:
+  name: postgresdb01
+  namespace: pg-test
+spec:
+  ownerRole: heinrich
+  parentDb: postgres01
+  secret: generated-DB-secret

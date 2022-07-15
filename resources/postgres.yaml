@@ -1,0 +1,7 @@
+apiVersion: db.grotjohann.com/v1
+kind: Postgres
+metadata:
+  name: postgres01
+spec:
+  connectionUrl: mypostgres.svc.default.cluster.local:5432
+  dbSecret: pg-secret
