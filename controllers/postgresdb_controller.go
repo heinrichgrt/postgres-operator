@@ -20,7 +20,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v4"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -35,10 +37,6 @@ type PostgresDBReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
-
-//+kubebuilder:rbac:groups=db.grotjohann.com,resources=postgresdbs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=db.grotjohann.com,resources=postgresdbs/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=db.grotjohann.com,resources=postgresdbs/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -62,22 +60,36 @@ func connectToDB(key string) (*pgx.Conn, error) {
 	}
 	return conn, err
 }
-func doesDBExist(h *pgx.Conn, dbname string) (bool, error) {
+func doesDBExist(conn *pgx.Conn, dbname string) (bool, error) {
 	// todo complete
 	STATEMENT := "SELECT 1 FROM pg_database WHERE datname='" + dbname + "';"
+	rows, _ := conn.Query(context.Background(), STATEMENT)
+	for rows.Next() {
+
+		fmt.Printf("test\n")
+	}
 	fmt.Printf("%v", STATEMENT)
 	return true, nil
 }
 
+//func createDBandRole (conn *pgx.Conn, dbname string, role string) (bool, error){
+//
+//	return true, nil
+//}
 func doesDBExistAndIsOwnerRight(h *pgx.Conn, dbname string, owner string) (bool, error) {
 	//todo complete
 	STATEMENT := "SELECT d.datname as \"Name\",pg_catalog.pg_get_userbyid(d.datdba) as \"Owner\" FROM pg_catalog.pg_database d WHERE d.datname = " + dbname
 	fmt.Printf("%v", STATEMENT)
 	return true, nil
 }
+
+//+kubebuilder:rbac:groups=db.grotjohann.com,resources=postgresdbs,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=db.grotjohann.com,resources=postgresdbs/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=db.grotjohann.com,resources=postgresdbs/finalizers,verbs=update
+
 func (r *PostgresDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
-	log.Info("Start reconcile DB Controller")
+	log.Info("DB: Start reconcile DB Controller")
 	postgresdb := &dbv1.PostgresDB{}
 	err := r.Get(ctx, req.NamespacedName, postgresdb)
 	if err != nil {
@@ -89,14 +101,38 @@ func (r *PostgresDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		log.Error(err, "Failed to get Postgres")
 		return ctrl.Result{}, err
 	}
+	// fetch parent:
+	postgres := &dbv1.Postgres{}
+	namespaceName := types.NamespacedName{
+		Namespace: "",
+		Name:      postgresdb.Spec.ParentDB,
+	}
+	err = r.Get(ctx, namespaceName, postgres)
+	// fetch the secret:
+	secret := &corev1.Secret{}
+	namespaceName = types.NamespacedName{
+		Namespace: "pg-operator-system",
+		Name:      postgres.Spec.DbSecret,
+	}
+	r.Client.Get(ctx, namespaceName, secret)
+	// make use of it:
+	pgcredentials(string(secret.Data["secret.txt"]), postgres)
+
 	log.Info("DB: we are in businiss")
+	// need to fetch the parent Spec
 	dbhande, err := connectToDB(postgresdb.Spec.ParentDB)
 	if err != nil {
-		log.Info("cannot connect to db", err)
+		log.Info("cannot connect to db")
 		return ctrl.Result{}, nil
 	}
 	defer dbhande.Close(context.Background())
-	log.Info("connected to db")
+	log.Info("DB: connected to db")
+
+	res, err := doesDBExist(dbhande, postgresdb.Name)
+	if res != true {
+		log.Info("DB: " + postgresdb.Name + " does not exist! ")
+
+	}
 	return ctrl.Result{}, nil
 }
 
