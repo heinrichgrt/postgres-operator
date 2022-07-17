@@ -48,7 +48,7 @@ type PostgresCredential struct {
 }
 
 var (
-	pgCredentials = map[string]PostgresCredential{}
+	pgCredentials = PostgresCredential{}
 )
 
 func pgcredentials(c string, p *dbv1.Postgres) {
@@ -62,18 +62,16 @@ func pgcredentials(c string, p *dbv1.Postgres) {
 		d := strings.Split(b[s], ":")
 		res[strings.TrimSpace(d[0])] = strings.TrimSpace(d[1])
 	}
-	pg := new(PostgresCredential)
-	pg.Username = res["user"]
-	pg.Password = res["pass"]
-	pg.Created = time.Now()
-	pg.ServerURL = p.Spec.ConnectionUrl
-	if _, ok := pgCredentials[p.Name]; !ok {
-		pgCredentials[p.Name] = *pg
-	}
+
+	pgCredentials.Username = res["user"]
+	pgCredentials.Password = res["pass"]
+	pgCredentials.Created = time.Now()
+	pgCredentials.ServerURL = p.Spec.ConnectionUrl
+
 }
 
 func checkConnection(s *dbv1.Postgres) error {
-	DATABASE_URL := "postgres://" + pgCredentials[s.Name].Username + ":" + pgCredentials[s.Name].Password + "@" + s.Spec.ConnectionUrl + "/postgres"
+	DATABASE_URL := "postgres://" + pgCredentials.Username + ":" + pgCredentials.Password + "@" + pgCredentials.ServerURL + "/postgres"
 	conn, err := pgx.Connect(context.Background(), DATABASE_URL)
 	fmt.Printf("trying to connect %v\n", DATABASE_URL)
 	if err == nil {

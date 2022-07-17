@@ -51,7 +51,7 @@ func connectToDB(key string) (*pgx.Conn, error) {
 	//todo make this more robust
 	//tood pgCredentials-map does not work. Replace with own code...
 	//DATABASE_URL := "postgres://" + pgCredentials[key].Username + ":" + pgCredentials[key].Password + "@" + pgCredentials[key].ServerURL + "/postgres"
-	DATABASE_URL := "postgres://postgres:WDWGGUuvgLwRaH7chz3C5LWTG5v8@mypostgres.default.svc.cluster.local:5432/postgres"
+	DATABASE_URL := "postgres://" + pgCredentials.Username + ":" + pgCredentials.Password + "@" + pgCredentials.ServerURL + "/postgres"
 	conn, err := pgx.Connect(context.Background(), DATABASE_URL)
 	fmt.Printf("trying to connect %v\n", DATABASE_URL)
 	if err == nil {
@@ -61,15 +61,25 @@ func connectToDB(key string) (*pgx.Conn, error) {
 	return conn, err
 }
 func doesDBExist(conn *pgx.Conn, dbname string) (bool, error) {
-	// todo complete
+	// todo that looks ugly...
 	STATEMENT := "SELECT 1 FROM pg_database WHERE datname='" + dbname + "';"
-	rows, _ := conn.Query(context.Background(), STATEMENT)
-	for rows.Next() {
-
-		fmt.Printf("test\n")
+	rows, err := conn.Query(context.Background(), STATEMENT)
+	if err != nil{
+		return false,err
 	}
-	fmt.Printf("%v", STATEMENT)
-	return true, nil
+	count := 0
+	for rows.Next(){
+		count++
+	}
+	if count == 0 {
+		return false, nil
+	}else{
+		return true,nil
+	}
+}
+
+func createRole(conn *pgx.Conn, roleName string) (bool, error){
+	
 }
 
 //func createDBandRole (conn *pgx.Conn, dbname string, role string) (bool, error){
