@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v4"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -36,6 +35,11 @@ import (
 type PostgresDBReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+}
+type postgresParent struct {
+	name     string
+	password string
+	username string
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -63,23 +67,24 @@ func connectToDB(key string) (*pgx.Conn, error) {
 func doesDBExist(conn *pgx.Conn, dbname string) (bool, error) {
 	// todo that looks ugly...
 	STATEMENT := "SELECT 1 FROM pg_database WHERE datname='" + dbname + "';"
-	rows, err := conn.Query(context.Background(), STATEMENT)
-	if err != nil{
-		return false,err
+	rows, err := conn.Query(context.
+		Background(), STATEMENT)
+	if err != nil {
+		return false, err
 	}
 	count := 0
-	for rows.Next(){
+	for rows.Next() {
 		count++
 	}
 	if count == 0 {
 		return false, nil
-	}else{
-		return true,nil
+	} else {
+		return true, nil
 	}
 }
 
-func createRole(conn *pgx.Conn, roleName string) (bool, error){
-	
+func createRole(conn *pgx.Conn, roleName string) (bool, error) {
+
 }
 
 //func createDBandRole (conn *pgx.Conn, dbname string, role string) (bool, error){
@@ -96,6 +101,21 @@ func doesDBExistAndIsOwnerRight(h *pgx.Conn, dbname string, owner string) (bool,
 //+kubebuilder:rbac:groups=db.grotjohann.com,resources=postgresdbs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=db.grotjohann.com,resources=postgresdbs/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=db.grotjohann.com,resources=postgresdbs/finalizers,verbs=update
+func (r *PostgresDBReconciler) ConnectToDB(ctx context.Context, req ctrl.Request) (res *postgresParent, error) {
+	res = postgresParent{}
+	postgresdb := &dbv1.PostgresDB{}
+	err := r.Get(ctx, req.NamespacedName, postgresdb)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			log.Info("Postgres resource not found. Ignoring since object must be deleted")
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		log.Error(err, "Failed to get Postgres")
+		//return ctrl.Result{}, err
+	}
+	return res, err
+}
 
 func (r *PostgresDBReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
